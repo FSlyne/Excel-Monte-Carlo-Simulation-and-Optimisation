@@ -1,0 +1,258 @@
+Sub MonteCarlo()
+    Dim FormulaCells As Range, Cell As Range, ConstantCells As Range, CommentCells As Range
+    Dim cCell As Range
+    Dim fCell As Range
+    Dim FormulaSheet As Worksheet
+    Dim Row As Integer
+    Dim Col As Integer
+    Dim index As Integer
+    Dim Iterations As Integer
+    Dim Comm As Integer
+    Dim Value As Integer
+    Dim C As Variant
+    Dim oCom As Comment
+    Dim fRow As Integer, fCol As Integer, cRow As Integer, cCol As Integer
+    Dim Count As Integer
+    Dim MaxIter As Integer, Iter As Integer
+    Dim Str As String
+    Dim UseBins As Boolean
+    
+    Iterations = 50
+    Iter = 1
+    MaxIter = 5 * Iterations
+    UseBins = True
+    
+'   Create a Range object for all formula cells
+    On Error Resume Next
+    Set FormulaCells = Range("A1").SpecialCells(xlCellTypeFormulas)
+    Set ConstantCells = Range("A1").SpecialCells(xlCellTypeConstants, xlNumbers)
+    Set CommentCells = Range("A1").SpecialCells(xlCellTypeComments)
+    ActiveSheet.enablecalculations = True
+    
+'   Exit if no formulas are found
+    If FormulaCells Is Nothing Then
+        MsgBox "No Formulas."
+        Exit Sub
+    End If
+    
+    Application.DisplayAlerts = False
+    Sheets("Flexing " & FormulaCells.Parent.Name).Delete
+    Sheets("Comments " & FormulaCells.Parent.Name).Delete
+    
+'   Add a new worksheet
+    Application.ScreenUpdating = True
+    Set FormulaSheet = ActiveWorkbook.Worksheets.Add
+    FormulaSheet.Name = "Flexing " & FormulaCells.Parent.Name
+    Set CommentsSheet = ActiveWorkbook.Worksheets.Add
+    CommentsSheet.Name = "Comments " & FormulaCells.Parent.Name
+
+'    CommentsSheet.enablecalculations = True
+    
+    
+'   Store each Comment
+    For Each cCell In CommentCells.Cells
+        With CommentsSheet
+        cRow = cCell.Comment.Parent.Row
+        cCol = cCell.Comment.Parent.Column
+        Cells(cRow, cCol) = cCell.Comment.Text
+        End With
+    Next cCell
+    
+'   Store each Constant
+    index = 1
+    For Each Cell In ConstantCells
+        cRow = Cell.Row
+        cCol = Cell.Column
+        If Cell.Interior.ColorIndex = 3 Then
+            With CommentsSheet
+            Cells(1, 100) = 0
+            Cells(index, 101) = Cell.Value
+            Cells(index, 102) = Split(Cells(cRow, cCol), vbLf)(1)
+            index = index + 1
+            End With
+        End If
+    Next Cell
+    
+
+
+       
+    For Row = 1 To Iterations
+    CommentsSheet.Cells(2, 100) = Iterations
+    CommentsSheet.Cells(1, 100) = Row
+    Iter = Iter + 1
+    index = 1
+    For Each Cell In ConstantCells
+        If Cell.Interior.ColorIndex = 3 Then
+            With CommentsSheet
+            Cell.Value = Cells(index, 102)
+            index = index + 1
+            Calculate
+            End With
+        End If
+    Next Cell
+    FormulaCells.Calculate
+    ConstantCells.Calculate
+    
+'   Process each Formula
+    Col = 2
+    For Each fCell In FormulaCells
+        fRow = fCell.Row
+        fCol = fCell.Column
+'        FormulaSheet.Cells(Row, Col + 30) = fRow & "-" & fCol
+        If fCell.Interior.ColorIndex = 3 Then
+            If UseBins Then
+                Dim V1 As Double, V2 As Double, V3 As Double, V4 As Double
+                V1 = fCell.Value
+                V2 = Application.WorksheetFunction.Log10(V1)
+                V3 = Application.WorksheetFunction.Round(V2, 0) - 2
+                V4 = Application.WorksheetFunction.Round(V1 / (10 ^ V3), 1) * 10 ^ V3
+                FormulaSheet.Cells(Row, Col) = V4
+            Else
+                FormulaSheet.Cells(Row, Col) = fCell.Value
+            End If
+'            FormulaSheet.Cells(Row, Col) = 10 ^ Application.WorksheetFunction.Log10(fCell.Value)
+            Comm = Split((Split(CommentsSheet.Cells(fRow, fCol), vbLf)(1)), ":")(1)
+'           FormulaSheet.Cells(Row, Col + 30) = CommentsSheet.Cells(fRow, fCol)
+'            Value = Split((Split(CommentsSheet.Cells(fRow, fCol), vbLf)(1)), ":")(1)
+            FormulaSheet.Cells(Row, Col + 30) = Split((Split(CommentsSheet.Cells(fRow, fCol), vbLf)(1)), ":")(1)
+            If FormulaSheet.Cells(Row, Col + 30) > 0 Then
+                If fCell.Value > FormulaSheet.Cells(Row, Col + 30) Then
+                  FormulaSheet.Cells(Row, Col).Interior.ColorIndex = 6
+                  FormulaSheet.Cells(Row, 1) = FormulaSheet.Cells(Row, 1) + 1
+                End If
+            End If
+            Col = Col + 1
+        End If
+    Next fCell
+        
+    Col = Col + 1
+
+'   Write out the Constant Cells
+    index = 1
+    For Each Cell In ConstantCells
+        If Cell.Interior.ColorIndex = 3 Then
+            FormulaSheet.Cells(Row, Col) = Cell.Value
+            index = index + 1
+            Col = Col + 1
+        End If
+    Next Cell
+    
+    FormulaSheet.Cells(Row, Col) = Row
+    
+    If FormulaSheet.Cells(Row, 1) > 0 Then
+        FormulaSheet.Rows(Row).Delete
+        Row = Row - 1
+    End If
+    
+    If Iter > MaxIter Then
+        Exit For
+    End If
+    
+    Next Row
+    
+    
+    
+    '   Restore each Constant
+    index = 1
+    For Each Cell In ConstantCells
+        With CommentsSheet
+        If Cell.Interior.ColorIndex = 3 Then
+             Cell.Value = Cells(index, 101)
+             index = index + 1
+        End If
+        End With
+    Next Cell
+    
+   
+'   Adjust column widths
+    FormulaSheet.Columns("A:C").AutoFit
+    Application.StatusBar = False
+    
+    Sheets("Comments " & FormulaCells.Parent.Name).Delete
+    
+End Sub
+
+Function InspectString(Str As String) As String
+Dim I As Integer
+Dim S As String
+Dim T As String
+For I = 1 To Len(Str)
+    T = Mid(Str, I, 1)
+    S = S & Asc(T)
+Next I
+CopyString = "-" & S & "-"
+End Function
+
+Function StripControlChars(source As String, Optional KeepCRLF As Boolean = _
+    True) As String
+    Dim index As Long
+    Dim bytes() As Byte
+    
+    ' the fastest way to process this string
+    ' is copy it into an array of Bytes
+    bytes() = source
+    For index = 0 To UBound(bytes) Step 2
+        ' if this is a control character
+        If bytes(index) < 32 And bytes(index + 1) = 0 Then
+            If Not KeepCRLF Or (bytes(index) <> 13 And bytes(index) <> 10) Then
+                ' the user asked to trim CRLF or this
+                ' character isn't a CR or a LF, so clear it
+                bytes(index) = 0
+            End If
+        End If
+    Next
+    
+    ' return this string, after filtering out all null chars
+    StripControlChars = Replace(bytes(), vbNullChar, "")
+            
+End Function
+
+Function NormFunc(R As Range) As Double
+' Usage: =NormFunc(RC[-])
+Dim V As Double
+V = R.Value
+Application.Volatile
+With Application.WorksheetFunction
+    NormFunc = .Norm_Inv(Rnd, V, V / 4)
+End With
+End Function
+Function EqualProbFunc(R As Range, Rat1 As Double, Rat2 As Double) As Double
+' Usage: =EqualProbFunc(RC[-],-0.5, +0.5)
+Dim V As Double
+V = R.Value
+Application.Volatile
+EqualProbFunc = ((Rat2 - Rat1) * Rnd + Rat1) * V
+End Function
+
+
+Function SeriesFunc(R As Range, Step1 As Variant, Rat1 As Variant, _
+                       Step2 As Variant, Rat2 As Variant, _
+                       Step3 As Variant, Rat3 As Variant, _
+                       Step4 As Variant, Rat4 As Variant, _
+                       Step5 As Variant, Rat5 As Variant) As Double
+' Usage
+' =SeriesFunc(RC[-1],1,0.5,11,0.6,21,0.7,31,0.8,41,0.9) - going upwards
+' =SeriesFunc(RC[-1],1,1.0,11,0.9,21,0.8,31,0.7,41,0.6) - going downwards
+Dim Step As Integer
+Dim VV As Double
+VV = R.Value
+
+Application.Volatile
+
+Step = Cells(1, 100)
+Dim V As Double
+If Not IsMissing(Step5) And Step >= Step5 Then
+        V = Rat5 * VV
+ElseIf Not IsMissing(Step4) And Step >= Step4 Then
+        V = Rat4 * VV
+ElseIf Not IsMissing(Step3) And Step >= Step3 Then
+        V = Rat3 * VV
+ElseIf Not IsMissing(Step2) And Step >= Step2 Then
+    V = Rat2 * VV
+ElseIf Not IsMissing(Step1) And Step >= Step1 Then
+    V = Rat1 * VV
+Else
+    V = VV
+End If
+SeriesFunc = V
+End Function
