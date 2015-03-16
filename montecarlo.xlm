@@ -20,7 +20,10 @@ Sub MonteCarlo()
     Iterations = 50
     Iter = 1
     MaxIter = 5 * Iterations
-    UseBins = True
+    UseBins = False
+    
+'   Turn on RC referencing style
+    Application.ReferenceStyle = xlR1C1
     
 '   Create a Range object for all formula cells
     On Error Resume Next
@@ -72,11 +75,33 @@ Sub MonteCarlo()
             End With
         End If
     Next Cell
-    
 
+'   Write out Detail of Variable Cells
+    Col = 2
+    For Each fCell In FormulaCells
+        fRow = fCell.Row
+        fCol = fCell.Column
+        If fCell.Interior.ColorIndex = 3 Then
+            FormulaSheet.Cells(1, Col) = Worksheets(FormulaCells.Parent.Name).Cells(fRow, fCol - 1).Value
+            Col = Col + 1
+        End If
+    Next fCell
+            
+    Col = Col + 1
+'   Write out Detail of Constant Cells
+    index = 1
+    For Each cCell In ConstantCells
+        cRow = cCell.Row
+        cCol = cCell.Column
+        If cCell.Interior.ColorIndex = 3 Then
+            FormulaSheet.Cells(1, Col) = Worksheets(ConstantCells.Parent.Name).Cells(cRow, cCol - 1).Value
+'            FormulaSheet.Cells(1, Col) = Cell.Row & "," & Cell.Column
+            Col = Col + 1
+        End If
+    Next cCell
 
        
-    For Row = 1 To Iterations
+    For Row = 2 To Iterations + 1
     CommentsSheet.Cells(2, 100) = Iterations
     CommentsSheet.Cells(1, 100) = Row
     Iter = Iter + 1
@@ -169,6 +194,9 @@ Sub MonteCarlo()
     Application.StatusBar = False
     
     Sheets("Comments " & FormulaCells.Parent.Name).Delete
+
+'   Turn on A1 referencing style
+    Application.ReferenceStyle = xlA1
     
 End Sub
 
@@ -208,7 +236,7 @@ Function StripControlChars(source As String, Optional KeepCRLF As Boolean = _
 End Function
 
 Function NormFunc(R As Range) As Double
-' Usage: =NormFunc(RC[-])
+' Usage: =NormFunc(RC[-1])
 Dim V As Double
 V = R.Value
 Application.Volatile
@@ -217,7 +245,7 @@ With Application.WorksheetFunction
 End With
 End Function
 Function EqualProbFunc(R As Range, Rat1 As Double, Rat2 As Double) As Double
-' Usage: =EqualProbFunc(RC[-],-0.5, +0.5)
+' Usage: =EqualProbFunc(RC[-1],-0.5, +0.5)
 Dim V As Double
 V = R.Value
 Application.Volatile
@@ -256,3 +284,7 @@ Else
 End If
 SeriesFunc = V
 End Function
+
+
+
+
