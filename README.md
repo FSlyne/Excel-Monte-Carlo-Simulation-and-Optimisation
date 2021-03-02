@@ -9,7 +9,9 @@ This is a simple application that varies particular values of a spreadsheet acco
 Frank
 
 Usage
+
 (a) import xlm macro into spreadsheet or your workspace
+
 (b) in the target sheet, for cells which are variable, include a comment against the cell as follows
 
 =SeriesFunc(RC[-1],1,0.5,11,0.6,21,0.7,31,0.8,41,0.9)
@@ -27,11 +29,13 @@ or
 Normal distribution about cell value.
 
 (c) for cells which are dependent variables or need to be reported, colour them red
+
 The application will try to use the cell to the immediate left as the label
 
 (d) change the number of iterations of the simulation
 
 (e) run the macro, which will produce another sheet with the name "Flexing Sheet1" or whatever the target sheet was called
+
 All the cells which are coloured red in step (c) report for each simulation. Each column is a reported variable. 
 
 
