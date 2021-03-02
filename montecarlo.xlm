@@ -1,3 +1,4 @@
+'   See associated Public Domain licencing. Frank Slyne 2020
 Sub MonteCarlo()
     Dim FormulaCells As Range, Cell As Range, ConstantCells As Range, CommentCells As Range
     Dim cCell As Range
