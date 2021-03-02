@@ -6,13 +6,15 @@ Excel Monte Carlo Simulation and Optimisation
 Background
 This is a simple application that varies particular values of a spreadsheet according to a distribution and report on dependent cells. In essence, you are flexing a static spreadsheet model. The distributions, currently, are equal probability, Normal distribution, or series distribution. The result is a new separate spreadsheet with each iteration of the model on a single line. This data can then, of course, be used for graphing etc.
 
+Frank
+
 Usage
 (a) import xlm macro into spreadsheet or your workspace
 (b) in the target sheet, for cells which are variable, include a comment against the cell as follows
 
 =SeriesFunc(RC[-1],1,0.5,11,0.6,21,0.7,31,0.8,41,0.9)
 
-
+Just 5 values allowed. Here, if random variable is >=0.9, value is 41. If >=0.8, 31. And so forth.
 
 or 
 =EqualProbFunc(RC[-1],-0.5, +0.5)
