@@ -15,7 +15,7 @@ Sub MonteCarlo()
     Dim fRow As Integer, fCol As Integer, cRow As Integer, cCol As Integer
     Dim Count As Integer
     Dim MaxIter As Integer, Iter As Integer
-    Dim Str As String
+    Dim str As String
     Dim UseBins As Boolean
     
     Iterations = 50
@@ -101,6 +101,8 @@ Sub MonteCarlo()
         End If
     Next cCell
 
+    Dim num_formulae As Integer
+    Dim num_constants As Integer
        
     For Row = 2 To Iterations + 1
     CommentsSheet.Cells(2, 100) = Iterations
@@ -150,6 +152,8 @@ Sub MonteCarlo()
             Col = Col + 1
         End If
     Next fCell
+    
+    num_formulae = Col - 2
         
     Col = Col + 1
 
@@ -162,6 +166,8 @@ Sub MonteCarlo()
             Col = Col + 1
         End If
     Next Cell
+    
+    num_constants = Col - num_formula - 6
     
     FormulaSheet.Cells(Row, Col) = Row
     
@@ -176,8 +182,6 @@ Sub MonteCarlo()
     
     Next Row
     
-    
-    
     '   Restore each Constant
     index = 1
     For Each Cell In ConstantCells
@@ -189,8 +193,49 @@ Sub MonteCarlo()
         End With
     Next Cell
     
-   
-'   Adjust column widths
+    Dim DependentRange As Range
+    Dim IndependentRange As Range
+    Dim LastRow As Long
+    Dim RowOffset As Integer
+    Dim CorrelationResult As Double
+    Dim ColIndex As Integer, ConstColIndex As Integer
+    ' Assuming that Iterations and num_formulae are already calculated
+
+    refrow = 1
+    refcol = num_formulae + num_constants + 5
+
+    ' Assuming the last row is based on Iterations
+    LastRow = Iterations
+
+    ' Loop over each formula and constant to calculate the correlation
+    For fCol = 1 To num_formulae
+        For cCol = 1 To num_constants
+
+            ' Define DependentRange and IndependentRange dynamically
+            Set DependentRange = FormulaSheet.Range(FormulaSheet.Cells(2, fCol + 1), FormulaSheet.Cells(LastRow, fCol + 1))
+            Set IndependentRange = FormulaSheet.Range(FormulaSheet.Cells(2, cCol + num_formulae + 2), FormulaSheet.Cells(LastRow, cCol + num_formulae + 2))
+
+            ' Calculate the correlation
+            CorrelationResult = Application.WorksheetFunction.Correl(DependentRange, IndependentRange)
+        
+            str = DependentRange.Address(ReferenceStyle:=xlR1C1) & "-" & IndependentRange.Address(ReferenceStyle:=xlR1C1)
+
+            ' Place the correlation result below the data
+            FormulaSheet.Cells(fCol + refrow, cCol + refcol).Value = CorrelationResult
+
+        Next cCol
+    Next fCol
+
+    ' Add in headers
+    For fCol = 1 To num_formulae
+    FormulaSheet.Cells(fCol + 1, refcol).Value = FormulaSheet.Cells(1, fCol + 1).Value
+    Next fCol
+
+    For cCol = 1 To num_constants
+        FormulaSheet.Cells(1, cCol + num_constants + num_formulae + 5).Value = FormulaSheet.Cells(1, cCol + num_formulae + 2).Value
+    Next cCol
+
+    '   Adjust column widths
     FormulaSheet.Columns("A:C").AutoFit
     Application.StatusBar = False
     
@@ -201,12 +246,12 @@ Sub MonteCarlo()
     
 End Sub
 
-Function InspectString(Str As String) As String
+Function InspectString(str As String) As String
 Dim I As Integer
 Dim S As String
 Dim T As String
-For I = 1 To Len(Str)
-    T = Mid(Str, I, 1)
+For I = 1 To Len(str)
+    T = Mid(str, I, 1)
     S = S & Asc(T)
 Next I
 CopyString = "-" & S & "-"
@@ -285,7 +330,3 @@ Else
 End If
 SeriesFunc = V
 End Function
-
-
-
-
